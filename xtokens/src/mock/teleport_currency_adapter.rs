@@ -9,7 +9,7 @@ use sp_std::{
 	result,
 };
 
-use orml_xcm_support::{OnDepositFail, UnknownAsset as UnknownAssetT};
+use orml_xcm_support::{holding_from_asset, OnDepositFail, UnknownAsset as UnknownAssetT};
 use xcm::v5::{prelude::*, Asset, Error as XcmError, Location, Result};
 use xcm_executor::{
 	traits::{ConvertLocation, MatchesFungible, TransactAsset},
@@ -94,8 +94,16 @@ impl<
 
 	fn check_in(_origin: &Location, _what: &Asset, _context: &XcmContext) {}
 
-	fn deposit_asset(asset: &Asset, location: &Location, _context: Option<&XcmContext>) -> Result {
-		match (
+	fn deposit_asset(
+		what: AssetsInHolding,
+		location: &Location,
+		_context: Option<&XcmContext>,
+	) -> result::Result<(), (AssetsInHolding, XcmError)> {
+		let assets: Vec<Asset> = what.assets_iter().collect();
+		let [asset] = assets.as_slice() else {
+			return Err((what, XcmError::FailedToTransactAsset("ExpectedSingleAsset")));
+		};
+		let result = match (
 			AccountIdConvert::convert_location(location),
 			CurrencyIdConvert::convert(asset.clone()),
 			Match::matches_fungible(asset),
@@ -106,7 +114,8 @@ impl<
 			// unknown asset
 			_ => UnknownAsset::deposit(asset, location)
 				.or_else(|err| DepositFailureHandler::on_deposit_unknown_asset_fail(err, asset, location)),
-		}
+		};
+		result.map_err(|err| (what, err))
 	}
 
 	fn withdraw_asset(
@@ -126,6 +135,10 @@ impl<
 				.map_err(|e| XcmError::FailedToTransactAsset(e.into()))
 		})?;
 
-		Ok(asset.clone().into())
+		Ok(holding_from_asset(asset))
+	}
+
+	fn mint_asset(what: &Asset, _context: &XcmContext) -> result::Result<AssetsInHolding, XcmError> {
+		Ok(holding_from_asset(what))
 	}
 }

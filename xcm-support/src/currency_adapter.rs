@@ -1,10 +1,14 @@
-use frame_support::traits::{ExistenceRequirement, Get};
+use frame_support::traits::{
+	tokens::imbalance::{ImbalanceAccounting, UnsafeConstructorDestructor, UnsafeManualAccounting},
+	ExistenceRequirement, Get,
+};
 use parity_scale_codec::FullCodec;
 use sp_runtime::{
 	traits::{Convert, MaybeSerializeDeserialize, SaturatedConversion},
 	DispatchError,
 };
 use sp_std::{
+	boxed::Box,
 	cmp::{Eq, PartialEq},
 	fmt::Debug,
 	marker::PhantomData,
@@ -19,6 +23,50 @@ use xcm_executor::{
 };
 
 use crate::UnknownAsset as UnknownAssetT;
+
+/// A fungible amount held in the XCM holding register without a backing imbalance.
+///
+/// `MultiCurrency` has no imbalance type: `withdraw` burns and `deposit` mints, so the holding only
+/// needs to carry the amount, exactly as it did before the executor started tracking imbalances.
+pub struct AmountCredit(pub u128);
+
+impl UnsafeConstructorDestructor<u128> for AmountCredit {
+	fn unsafe_clone(&self) -> Box<dyn ImbalanceAccounting<u128>> {
+		Box::new(AmountCredit(self.0))
+	}
+
+	fn forget_imbalance(&mut self) -> u128 {
+		sp_std::mem::replace(&mut self.0, 0)
+	}
+}
+
+impl UnsafeManualAccounting<u128> for AmountCredit {
+	fn saturating_subsume(&mut self, mut other: Box<dyn ImbalanceAccounting<u128>>) {
+		self.0 = self.0.saturating_add(other.forget_imbalance());
+	}
+}
+
+impl ImbalanceAccounting<u128> for AmountCredit {
+	fn amount(&self) -> u128 {
+		self.0
+	}
+
+	fn saturating_take(&mut self, amount: u128) -> Box<dyn ImbalanceAccounting<u128>> {
+		let taken = self.0.min(amount);
+		self.0 -= taken;
+		Box::new(AmountCredit(taken))
+	}
+}
+
+/// Put a single fungible `asset` into a fresh holding as an [`AmountCredit`].
+pub fn holding_from_asset(asset: &Asset) -> AssetsInHolding {
+	match asset.fun {
+		Fungibility::Fungible(amount) => {
+			AssetsInHolding::new_from_fungible_credit(asset.id.clone(), Box::new(AmountCredit(amount)))
+		}
+		Fungibility::NonFungible(instance) => AssetsInHolding::new_from_non_fungible(asset.id.clone(), instance),
+	}
+}
 
 /// Asset transaction errors.
 enum Error {
@@ -145,19 +193,28 @@ impl<
 		DepositFailureHandler,
 	>
 {
-	fn deposit_asset(asset: &Asset, location: &Location, _context: Option<&XcmContext>) -> Result {
-		match (
+	fn deposit_asset(
+		what: AssetsInHolding,
+		location: &Location,
+		_context: Option<&XcmContext>,
+	) -> result::Result<(), (AssetsInHolding, XcmError)> {
+		let assets: Vec<Asset> = what.assets_iter().collect();
+		let [asset] = assets.as_slice() else {
+			return Err((what, XcmError::FailedToTransactAsset("ExpectedSingleAsset")));
+		};
+		let result = match (
 			AccountIdConvert::convert_location(location),
 			CurrencyIdConvert::convert(asset.clone()),
-			Match::matches_fungible(asset),
+			Match::matches_fungible(&asset),
 		) {
 			// known asset
 			(Some(who), Some(currency_id), Some(amount)) => MultiCurrency::deposit(currency_id, &who, amount)
 				.or_else(|err| DepositFailureHandler::on_deposit_currency_fail(err, currency_id, &who, amount)),
 			// unknown asset
-			_ => UnknownAsset::deposit(asset, location)
-				.or_else(|err| DepositFailureHandler::on_deposit_unknown_asset_fail(err, asset, location)),
-		}
+			_ => UnknownAsset::deposit(&asset, location)
+				.or_else(|err| DepositFailureHandler::on_deposit_unknown_asset_fail(err, &asset, location)),
+		};
+		result.map_err(|err| (what, err))
 	}
 
 	fn withdraw_asset(
@@ -177,7 +234,7 @@ impl<
 				.map_err(|e| XcmError::FailedToTransactAsset(e.into()))
 		})?;
 
-		Ok(asset.clone().into())
+		Ok(holding_from_asset(asset))
 	}
 
 	fn transfer_asset(
@@ -185,7 +242,7 @@ impl<
 		from: &Location,
 		to: &Location,
 		_context: &XcmContext,
-	) -> result::Result<AssetsInHolding, XcmError> {
+	) -> result::Result<Asset, XcmError> {
 		let from_account =
 			AccountIdConvert::convert_location(from).ok_or_else(|| XcmError::from(Error::AccountIdConversionFailed))?;
 		let to_account =
@@ -204,6 +261,11 @@ impl<
 		)
 		.map_err(|e| XcmError::FailedToTransactAsset(e.into()))?;
 
-		Ok(asset.clone().into())
+		Ok(asset.clone())
+	}
+
+	fn mint_asset(what: &Asset, _context: &XcmContext) -> result::Result<AssetsInHolding, XcmError> {
+		// Nothing is issued until the holding is deposited, so the holding is just the amount.
+		Ok(holding_from_asset(what))
 	}
 }

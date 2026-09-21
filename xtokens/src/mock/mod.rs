@@ -37,7 +37,7 @@ parameter_types! {
 	PartialEq,
 	Copy,
 	Clone,
-	RuntimeDebug,
+	Debug,
 	PartialOrd,
 	Ord,
 	parity_scale_codec::MaxEncodedLen,
@@ -365,36 +365,36 @@ impl WeightTrader for AllTokensAreCreatedEqualToWeight {
 	fn buy_weight(
 		&mut self,
 		weight: Weight,
-		payment: AssetsInHolding,
+		mut payment: AssetsInHolding,
 		_context: &XcmContext,
-	) -> Result<AssetsInHolding, XcmError> {
+	) -> Result<AssetsInHolding, (AssetsInHolding, XcmError)> {
 		let asset_id = payment
 			.fungible
-			.iter()
+			.keys()
 			.next()
 			.expect("Payment must be something; qed")
-			.0;
+			.clone();
 		let required = Asset {
 			id: asset_id.clone(),
 			fun: Fungible(weight.ref_time() as u128),
 		};
 
-		let Asset {
-			fun: _,
-			id: AssetId(ref id),
-		} = &required;
+		self.0 = asset_id.0;
 
-		self.0 = id.clone();
-
-		let unused = payment.checked_sub(required).map_err(|_| XcmError::TooExpensive)?;
-		Ok(unused)
+		// The fee is burned: `MultiCurrency` withdrew it already, so dropping the taken holding
+		// settles nothing further.
+		match payment.try_take(required.into()) {
+			Ok(_fee) => Ok(payment),
+			Err(_) => Err((payment, XcmError::TooExpensive)),
+		}
 	}
 
-	fn refund_weight(&mut self, weight: Weight, _context: &XcmContext) -> Option<Asset> {
+	fn refund_weight(&mut self, weight: Weight, _context: &XcmContext) -> Option<AssetsInHolding> {
 		if weight.is_zero() {
 			None
 		} else {
-			Some((self.0.clone(), weight.ref_time() as u128).into())
+			let asset: Asset = (self.0.clone(), weight.ref_time() as u128).into();
+			Some(orml_xcm_support::holding_from_asset(&asset))
 		}
 	}
 }
