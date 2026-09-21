@@ -33,7 +33,7 @@ use parity_scale_codec::MaxEncodedLen;
 use scale_info::TypeInfo;
 use sp_runtime::{
 	traits::{SaturatedConversion, Saturating},
-	DispatchResult, Debug,
+	Debug, DispatchResult,
 };
 
 mod default_weight;

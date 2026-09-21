@@ -69,17 +69,7 @@ pub mod module {
 
 	/// Match rules to filter key is in bypass whitelist.
 	#[derive(
-		PartialOrd,
-		Ord,
-		PartialEq,
-		Eq,
-		Clone,
-		Encode,
-		Decode,
-		Debug,
-		TypeInfo,
-		MaxEncodedLen,
-		DecodeWithMemTracking,
+		PartialOrd, Ord, PartialEq, Eq, Clone, Encode, Decode, Debug, TypeInfo, MaxEncodedLen, DecodeWithMemTracking,
 	)]
 	pub enum KeyFilter {
 		/// If the encoded key is equal to the vec, the key is in whitelist.

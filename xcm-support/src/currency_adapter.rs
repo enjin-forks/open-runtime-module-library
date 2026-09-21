@@ -24,10 +24,12 @@ use xcm_executor::{
 
 use crate::UnknownAsset as UnknownAssetT;
 
-/// A fungible amount held in the XCM holding register without a backing imbalance.
+/// A fungible amount held in the XCM holding register without a backing
+/// imbalance.
 ///
-/// `MultiCurrency` has no imbalance type: `withdraw` burns and `deposit` mints, so the holding only
-/// needs to carry the amount, exactly as it did before the executor started tracking imbalances.
+/// `MultiCurrency` has no imbalance type: `withdraw` burns and `deposit` mints,
+/// so the holding only needs to carry the amount, exactly as it did before the
+/// executor started tracking imbalances.
 pub struct AmountCredit(pub u128);
 
 impl UnsafeConstructorDestructor<u128> for AmountCredit {
@@ -265,7 +267,8 @@ impl<
 	}
 
 	fn mint_asset(what: &Asset, _context: &XcmContext) -> result::Result<AssetsInHolding, XcmError> {
-		// Nothing is issued until the holding is deposited, so the holding is just the amount.
+		// Nothing is issued until the holding is deposited, so the holding is just the
+		// amount.
 		Ok(holding_from_asset(what))
 	}
 }

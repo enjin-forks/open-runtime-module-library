@@ -38,7 +38,7 @@ use parity_scale_codec::{HasCompact, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::{
 	traits::{AtLeast32Bit, BlockNumberProvider, CheckedAdd, Saturating, StaticLookup, Zero},
-	ArithmeticError, DispatchResult, Debug,
+	ArithmeticError, Debug, DispatchResult,
 };
 use sp_std::{
 	cmp::{Eq, PartialEq},

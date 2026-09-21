@@ -12,7 +12,7 @@ use scale_info::TypeInfo;
 use sp_core::U256;
 use sp_runtime::{
 	traits::{AtLeast32BitUnsigned, MaybeSerializeDeserialize, Member, Saturating, UniqueSaturatedInto, Zero},
-	FixedPointOperand, Debug, SaturatedConversion,
+	Debug, FixedPointOperand, SaturatedConversion,
 };
 use sp_std::{borrow::ToOwned, collections::btree_map::BTreeMap, fmt::Debug, prelude::*};
 

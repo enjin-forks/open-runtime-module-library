@@ -43,7 +43,7 @@ use sp_core::defer;
 use sp_io::hashing::blake2_256;
 use sp_runtime::{
 	traits::{CheckedSub, Dispatchable, Hash, Saturating},
-	ArithmeticError, DispatchError, DispatchResult, Either, Debug,
+	ArithmeticError, Debug, DispatchError, DispatchResult, Either,
 };
 use sp_std::prelude::*;
 

@@ -27,7 +27,7 @@ use parity_scale_codec::{Decode, DecodeWithMemTracking, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_runtime::{
 	traits::{AtLeast32BitUnsigned, CheckedAdd, CheckedSub, MaybeSerializeDeserialize, Member, One, Zero},
-	ArithmeticError, DispatchError, DispatchResult, Debug,
+	ArithmeticError, Debug, DispatchError, DispatchResult,
 };
 use sp_std::vec::Vec;
 

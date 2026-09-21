@@ -381,8 +381,8 @@ impl WeightTrader for AllTokensAreCreatedEqualToWeight {
 
 		self.0 = asset_id.0;
 
-		// The fee is burned: `MultiCurrency` withdrew it already, so dropping the taken holding
-		// settles nothing further.
+		// The fee is burned: `MultiCurrency` withdrew it already, so dropping the taken
+		// holding settles nothing further.
 		match payment.try_take(required.into()) {
 			Ok(_fee) => Ok(payment),
 			Err(_) => Err((payment, XcmError::TooExpensive)),

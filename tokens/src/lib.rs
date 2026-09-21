@@ -60,7 +60,7 @@ use parity_scale_codec::MaxEncodedLen;
 use scale_info::TypeInfo;
 use sp_runtime::{
 	traits::{Bounded, CheckedAdd, CheckedSub, MaybeSerializeDeserialize, Member, Saturating, StaticLookup, Zero},
-	ArithmeticError, DispatchError, DispatchResult, Debug, TokenError,
+	ArithmeticError, Debug, DispatchError, DispatchResult, TokenError,
 };
 use sp_std::{cmp, convert::Infallible, marker, prelude::*, vec::Vec};
 
@@ -139,9 +139,7 @@ pub struct ReserveData<ReserveIdentifier, Balance> {
 }
 
 /// balance information for an account.
-#[derive(
-	Encode, Decode, DecodeWithMemTracking, Clone, PartialEq, Eq, Default, MaxEncodedLen, Debug, TypeInfo,
-)]
+#[derive(Encode, Decode, DecodeWithMemTracking, Clone, PartialEq, Eq, Default, MaxEncodedLen, Debug, TypeInfo)]
 pub struct AccountData<Balance> {
 	/// Non-reserved part of the balance. There may still be restrictions on
 	/// this, but it is the total pool what may in principle be transferred,
