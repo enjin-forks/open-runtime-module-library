@@ -2,7 +2,7 @@
 
 use impl_trait_for_tuples::impl_for_tuples;
 use parity_scale_codec::{Decode, DecodeWithMemTracking, Encode, MaxEncodedLen};
-use sp_runtime::{Debug, DispatchResult};
+use sp_runtime::DispatchResult;
 use sp_std::{
 	cmp::{Eq, PartialEq},
 	prelude::Vec,
